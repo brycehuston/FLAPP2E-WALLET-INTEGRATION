@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06e300208fa3ee04a99d031a99308441, type: 3}
+  m_Name: ProjectConfigData
+  m_EditorClassIdentifier: 
+  projectID: 2101f9ef-45a9-40cf-bed8-8892cf38df40
+  chainID: 80001
+  chain: Polygon PoS
+  network: Polygon Mumbai
+  rpc: https://polygon-mumbai.g.alchemy.com/v2/B6sa4mTz6MZj4CjHggKjX5IdJ8tafcGz
