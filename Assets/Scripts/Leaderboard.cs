@@ -41,7 +41,7 @@ public class Leaderboard : MonoBehaviour
         {
             if (response.success && response.items != null)
             {
-                string tempNames = "Sol Address\n";
+                string tempNames = "Solana Address\n";
                 string tempScores = "Scores\n";
 
                 foreach (var member in response.items)

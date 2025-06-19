@@ -1,3 +1,4 @@
+
 using System;
 using UnityEngine;
 using UnityEngine.UI;
@@ -74,8 +75,6 @@ public class GameManager : MonoBehaviour
     {
         if (Score > highScore)
         {
-            Debug.Log("🔥 NEW HIGH SCORE! Logging and storing...");
-
             highScore = Score;
             PlayerPrefs.SetInt("HighScore", highScore);
             PlayerPrefs.Save();
@@ -120,6 +119,7 @@ public class GameManager : MonoBehaviour
         {
             leaderboardCanvas.SetActive(true);
             hasNewHighScore = false;
+            return;
         }
 
         if (currentLives <= 0)

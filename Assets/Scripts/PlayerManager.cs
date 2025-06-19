@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 public class PlayerManager : MonoBehaviour
 {
-    [SerializeField] private TMP_InputField playerNameInputField;
+    [SerializeField] private TMP_InputField walletTextDisplay;
     [SerializeField] private Leaderboard leaderboard;
     [SerializeField] private GameObject leaderboardCanvas;
 
@@ -42,11 +42,11 @@ public class PlayerManager : MonoBehaviour
 
     public void SubmitScore()
     {
-        string playerName = playerNameInputField.text;
+        string playerName = walletTextDisplay.text;
 
         if (!IsValidSolAddress(playerName))
         {
-            Debug.LogError("❌ Invalid Solana wallet address.");
+            Debug.LogError(" Invalid Solana wallet address.");
             return;
         }
 
@@ -54,11 +54,11 @@ public class PlayerManager : MonoBehaviour
         {
             if (response.success)
             {
-                Debug.Log("✅ Wallet address submitted: " + playerName);
+                Debug.Log(" Wallet address submitted: " + playerName);
             }
             else
             {
-                Debug.Log("❌ Failed to set player name: " + response.text);
+                Debug.Log("Failed to set player name: " + response.text);
             }
         });
 
@@ -75,10 +75,6 @@ public class PlayerManager : MonoBehaviour
     public void ShowLeaderboardPanel()
     {
         leaderboardCanvas.SetActive(true);
-
-#if UNITY_IOS || UNITY_ANDROID
-        playerNameInputField.ActivateInputField();
-#endif
     }
 
     private bool IsValidSolAddress(string address)
