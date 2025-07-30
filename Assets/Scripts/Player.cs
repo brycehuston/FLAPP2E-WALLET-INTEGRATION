@@ -11,6 +11,9 @@ public class Player : MonoBehaviour
     public float strength = 5f;
     [SerializeField] private AudioSource jumpSoundEffect;
 
+    private float maxFallSpeed = -15f;
+    private float maxRiseSpeed = 8f;
+
     private void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
@@ -33,33 +36,28 @@ public class Player : MonoBehaviour
     {
         if (!enabled) return;
 
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
+        bool jump = Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0);
+
+        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
         {
-            direction = Vector3.up * strength;
-            jumpSoundEffect.Play();
+            jump = true;
         }
 
-        if (Input.touchCount > 0)
+        if (jump)
         {
-            Touch touch = Input.GetTouch(0);
-            if (touch.phase == TouchPhase.Began)
-            {
-                direction = Vector3.up * strength;
-                jumpSoundEffect.Play();
-            }
+            direction = Vector3.up * strength;
+            jumpSoundEffect?.Play();
         }
 
         direction.y += gravity * Time.deltaTime;
+        direction.y = Mathf.Clamp(direction.y, maxFallSpeed, maxRiseSpeed);
+
         transform.position += direction * Time.deltaTime;
     }
 
     private void AnimateSprite()
     {
-        spriteIndex++;
-        if (spriteIndex >= sprites.Length)
-        {
-            spriteIndex = 0;
-        }
+        spriteIndex = (spriteIndex + 1) % sprites.Length;
         spriteRenderer.sprite = sprites[spriteIndex];
     }
 
@@ -67,11 +65,11 @@ public class Player : MonoBehaviour
     {
         if (!enabled) return;
 
-        if (other.gameObject.tag == "Obstacle")
+        if (other.CompareTag("Obstacle"))
         {
             FindObjectOfType<GameManager>().GameOver();
         }
-        else if (other.gameObject.tag == "Scoring")
+        else if (other.CompareTag("Scoring"))
         {
             FindObjectOfType<GameManager>().IncreaseScore(1);
         }

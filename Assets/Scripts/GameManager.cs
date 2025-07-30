@@ -1,5 +1,4 @@
-
-using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -11,12 +10,13 @@ public class GameManager : MonoBehaviour
     public GameObject playButton;
     public GameObject backButton;
     public GameObject gameOver;
-    public GameObject leaderboardCanvas;
     public Camera mainCamera;
     public HighScoreDisplay highScoreDisplay;
+    public Leaderboard leaderboard;
     public ParticleSystem highScoreEffect;
     public TextPulse highScoreTextPulse;
     public Text livesText;
+    public AudioSource gameOverSound;
 
     public static int Score { get; private set; }
 
@@ -33,18 +33,45 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        player = FindObjectOfType<Player>();
-        highScoreDisplay = FindObjectOfType<HighScoreDisplay>();
-        originalCamPos = Camera.main.transform.position;
+        PlayerPrefs.SetInt("LastSubmittedScore", 0); // Reset for testing
+        PlayerPrefs.Save();
 
-        highScore = PlayerPrefs.GetInt("HighScore", 0);
-        if (highScoreDisplay != null)
-        {
-            highScoreDisplay.UpdateHighScore(highScore);
-        }
+        leaderboard = leaderboard != null ? leaderboard : FindObjectOfType<Leaderboard>();
+        player = player != null ? player : FindObjectOfType<Player>();
+        highScoreDisplay = highScoreDisplay != null ? highScoreDisplay : FindObjectOfType<HighScoreDisplay>();
+
+        if (highScoreEffect != null)
+            highScoreEffect.Stop();
+
+        if (Camera.main != null)
+            originalCamPos = Camera.main.transform.position;
+
+        if (leaderboard != null)
+            StartCoroutine(InitializeLeaderboardTopScore());
 
         Pause();
         ResetLives();
+    }
+
+    private IEnumerator InitializeLeaderboardTopScore()
+    {
+        yield return StartCoroutine(leaderboard.FetchTopHighscoresRoutine());
+
+        int topScore = 0;
+
+        if (leaderboard != null && leaderboard.playerScores != null)
+        {
+            string[] lines = leaderboard.playerScores.text.Split('\n');
+            if (lines.Length > 1 && int.TryParse(lines[1], out int parsedScore))
+            {
+                topScore = parsedScore;
+            }
+        }
+
+        highScore = topScore;
+
+        if (highScoreDisplay != null)
+            highScoreDisplay.UpdateHighScore(highScore);
     }
 
     public void Play()
@@ -57,11 +84,13 @@ public class GameManager : MonoBehaviour
         playButton.SetActive(false);
         gameOver.SetActive(false);
         backButton.SetActive(false);
-        leaderboardCanvas.SetActive(false);
         ResetPipes();
     }
 
-    void Update() => ShakeCamera();
+    void Update()
+    {
+        ShakeCamera();
+    }
 
     public void IncreaseScore(int amount)
     {
@@ -93,10 +122,18 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void StopHighScoreEffects()
+    {
+        highScoreEffect?.Stop();
+        highScoreTextPulse?.StopPulsing();
+        hasPlayedHighScoreSound = false;
+    }
+
     private void ShakeCamera()
     {
-        mainCamera.transform.localPosition = Score >= highScore
-            ? originalCamPos + UnityEngine.Random.insideUnitSphere * shakeAmount
+        if (mainCamera == null) return;
+        mainCamera.transform.localPosition = hasNewHighScore
+            ? originalCamPos + Random.insideUnitSphere * shakeAmount
             : originalCamPos;
     }
 
@@ -112,26 +149,53 @@ public class GameManager : MonoBehaviour
 
     public void GameOver()
     {
+        // 1) Lose a life
         currentLives--;
         UpdateLivesDisplay();
 
-        if (hasNewHighScore && leaderboardCanvas != null)
+        // 2) Debug log for clarity
+        int lastSubmitted = PlayerPrefs.GetInt("LastSubmittedScore", 0);
+        Debug.Log($"Score: {Score}");
+        Debug.Log($"LastSubmittedScore: {lastSubmitted}");
+        Debug.Log($"IsTop10: {leaderboard.IsTop10(Score)}");
+
+        // 3) If this run cracked the Top‑10 (and beats your last submission), submit it
+        if (leaderboard != null
+            && leaderboard.IsTop10(Score)
+            && Score > lastSubmitted
+            && Score >= 10)
         {
-            leaderboardCanvas.SetActive(true);
-            hasNewHighScore = false;
+            // Remember we already submitted this run so we don’t do it again
+            PlayerPrefs.SetInt("LastSubmittedScore", Score);
+            PlayerPrefs.Save();
+
+            // Hand off to PlayerManager to show the leaderboard popup
+            FindObjectOfType<PlayerManager>()
+                .ShowLeaderboardPanel();
+
+            // Stop the player from moving
+            player.enabled = false;
             return;
         }
 
+        // 4) If you’ve run out of lives, go back to main menu
         if (currentLives <= 0)
         {
-            SceneManager.LoadScene(0);
+            SceneManager.LoadScene("MainMenu");
             return;
         }
 
+        // 5) Otherwise it’s a standard “game over” screen
+        gameOverSound?.Play();
         gameOver.SetActive(true);
         playButton.SetActive(true);
         backButton.SetActive(true);
 
+        // Refresh the top‑left high‑score display
+        if (highScoreDisplay != null)
+            highScoreDisplay.UpdateHighScore(highScore);
+
+        // Reset pipe speed, stop any ongoing effects, and pause
         hasPlayedHighScoreSound = false;
         currentPipeSpeed = initialPipeSpeed;
         Pause();
@@ -143,12 +207,16 @@ public class GameManager : MonoBehaviour
         UpdateLivesDisplay();
     }
 
-    private void UpdateLivesDisplay()
+    public void UpdateLivesDisplay()
     {
-        livesText.text = new string('I', currentLives).Replace("I", "I ");
+        int safeLives = Mathf.Max(0, currentLives);
+        livesText.text = new string('♥', safeLives);
     }
 
-    private void UpdateScoreText() => scoreText.text = Score.ToString();
+    private void UpdateScoreText()
+    {
+        scoreText.text = Score.ToString();
+    }
 
     public void Pause()
     {
@@ -159,8 +227,11 @@ public class GameManager : MonoBehaviour
     private void ResetPipes()
     {
         foreach (var pipe in FindObjectsOfType<Pipes>())
-        {
             Destroy(pipe.gameObject);
-        }
+    }
+
+    public void BackToMenu()
+    {
+        SceneManager.LoadScene("MainMenu");
     }
 }
